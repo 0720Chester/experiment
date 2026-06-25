@@ -1,145 +1,34 @@
-# 可微光栅化实验项目
+# 可微光栅化与三维重建实验
 
-## 项目概述
+### 专业：计算机科学与技术
 
-本项目实现了一个可微光栅化（Differentiable Rasterization）实验，目标是学习将一个初始球体通过梯度下降优化，逐渐变形为目标形状（类似奶牛）。
+### 姓名：王旭
 
-## 当前状态
+### 学号：202411081115
 
-### ✅ 成功运行的版本
+## 1. 实验目标
+- 理解可微光栅化处理离散网格边界的数学近似方法。
+- 掌握从多视角2D剪影反推优化3D网格顶点坐标的流程。
+- 认识正则化在防止网格优化陷入局部最优与拓扑崩坏中的关键作用。
 
-已创建并成功运行了**快速优化版本** (`fast_optimization.py`)：
-- 使用 Chamfer Distance 作为主要损失函数
-- 包含三种正则化损失（拉普拉斯平滑、边长一致性、法线一致性）
-- 运行时间短，适合快速验证
+## 2. 实验原理
+核心任务：让一个球体通过梯度下降，形变为目标模型（如奶牛）。需解决两个问题：
 
-### ⚠️ 完整版本 (需要pytorch3d)
+- **防梯度消失：软光栅化**
+  硬光栅化边界阶跃导致梯度为0。软光栅化通过计算像素到三角形边缘的距离，用 `Sigmoid` 函数在边界产生平滑概率过渡，使边界外也能提供非零梯度，参数 `σ` 控制模糊程度。
 
-原本计划使用 `main.py` 或 `simple_optimization.py`，这些需要 PyTorch3D 库。但由于当前环境（macOS）编译问题，pytorch3d 无法直接安装。
+- **防局部最优：网格正则化**
+  纯图像损失会使顶点交叉、重叠。必须引入三种正则化约束，保持网格光滑：
+  - **拉普拉斯平滑**：约束相邻顶点，防尖刺。
+  - **边长正则化**：惩罚过长/过短的边，保持均匀。
+  - **法线一致性**：约束相邻面法线方向，防表面翻转。
 
-## 快速开始
-
-### 运行快速版本
-
-```bash
-python3 fast_optimization.py
-```
-
-这将：
-1. 创建一个初始球体网格
-2. 创建目标形状
-3. 执行500次迭代优化
-4. 保存结果到 `output/` 目录
-
-### 查看结果
-
-生成的文件包括：
-- `source_sphere.png` - 初始球体
-- `target_shape.png` - 目标形状
-- `optimized_mesh.png` - 优化后的网格
-- `final_optimized.obj` - 优化后的3D模型（可用MeshLab等软件打开）
-- `optimized_iter_*.obj` - 优化过程中的中间结果
-
-## 实验原理
-
-### 1. 软光栅化 (Soft Rasterization)
-
-**问题**：传统硬光栅化中，像素要么在三角形内，要么在外，导致边界处梯度为0。
-
-**解决方案**：使用软光栅化，通过Sigmoid函数产生平滑的概率过渡：
-
-```
-A(d) = sigmoid(d/σ)
-```
-
-其中σ控制边缘模糊程度。
-
-### 2. 网格正则化 (Mesh Regularization)
-
-**问题**：仅依靠图像差异优化会导致网格拓扑崩坏。
-
-**解决方案**：引入三种正则化损失：
-- **拉普拉斯平滑** (w=0.5)：约束相邻顶点，防止尖锐突起
-- **边长一致性** (w=0.1)：惩罚过长或过短的边
-- **法线一致性** (w=0.05)：约束相邻面的法线方向
-
-**总损失函数**：
-```
-L_total = L_chamfer + w_lap*L_lap + w_edge*L_edge + w_normal*L_normal
-```
-
-## 安装完整版 PyTorch3D
-
-如果你想运行使用PyTorch3D的完整版本，需要以下步骤：
-
-### 方法1: 使用 Conda（推荐）
-
-```bash
-# 创建conda环境
-conda create -n pytorch3d python=3.9
-conda activate pytorch3d
-
-# 安装PyTorch
-conda install pytorch torchvision pytorch-cuda=11.6 -c pytorch -c nvidia
-
-# 安装PyTorch3D
-conda install -c pytorch3d pytorch3d
-```
-
-### 方法2: 从源码编译 (macOS)
-
-```bash
-git clone https://github.com/facebookresearch/pytorch3d.git
-cd pytorch3d
-MACOSX_DEPLOYMENT_TARGET=10.14 CC=clang CXX=clang++ pip install .
-```
-
-### 方法3: 使用pip (Linux)
-
-```bash
-pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu113_pyt1110/download.html
-```
-
-## 项目文件说明
-
-| 文件 | 说明 |
-|------|------|
-| `fast_optimization.py` | ✅ 快速优化版本（已运行成功） |
-| `main.py` | 完整版本（需要pytorch3d） |
-| `simple_optimization.py` | 简单版本（需要pytorch3d） |
-| `simplified_differentiable_rasterization.py` | 纯Python软光栅化版本（运行较慢） |
-| `output/` | 输出目录 |
-
-## 选做内容
-
-### 联合纹理优化
-
-使用 `SoftPhongShader` 不仅拟合剪影，还要拟合RGB图像，同时优化：
-- 网格顶点坐标
-- 顶点颜色或纹理贴图
-
-参考教程：https://github.com/facebookresearch/pytorch3d/blob/main/docs/tutorials/fit_textured_mesh.ipynb
-
-## 实验心得
-
-### 防止梯度消失
-
-软光栅化通过Sigmoid函数在边界处产生平滑过渡，即使顶点在像素外部也能提供梯度信息。
-
-### 防止局部最优
-
-正则化项对保持网格的光滑和物理合理性至关重要：
-- 无正则化 → 充满尖刺的"刺猬"
-- 加正则化 → 光滑的目标形状
-
-### 权重调节
-
-不同的正则化权重会产生不同效果：
-- 拉普拉斯权重过高 → 过度平滑，丢失细节
-- 拉普拉斯权重过低 → 可能出现不规则突起
-
-## 致谢
-
-本实验参考了：
-- PyTorch3D官方教程：https://pytorch3d.org/tutorials
-- Facebook Research PyTorch3D：https://github.com/facebookresearch/pytorch3d
+## 3. 关键实现
+1.  **环境与数据**：安装 `pytorch3d` 等库，加载目标网格并渲染多视角目标剪影，初始化球体网格。
+2.  **构建渲染器**：基于 `SoftSilhouetteShader`，设置 `blur_radius` 参数控制软化程度。
+3.  **优化循环**：
+    - 设顶点偏移量 `deform_verts` 为可微参数。
+    - **多视角损失**：迭代计算形变网格与目标剪影的 `MSE Loss`。
+    - **组合总损失**：`总损失 = 剪影损失 + w1×拉普拉斯损失 + w2×边长损失 + w3×法线损失`。
+    - 用 Adam 优化器更新顶点，逐步形变。
+4.  **可视化**：每 N 轮保存渲染图或输出中间网格，观察球体逐渐拟合成目标形状。
